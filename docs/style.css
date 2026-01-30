@@ -29,6 +29,9 @@ body {
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     min-height: 100vh;
     min-height: 100dvh;
+    min-height: 100svh;
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
     padding-top: calc(20px + env(safe-area-inset-top));
     padding-bottom: calc(20px + env(safe-area-inset-bottom));
     padding-left: calc(20px + env(safe-area-inset-left));
