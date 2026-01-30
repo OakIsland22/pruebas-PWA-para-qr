@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Generar Iconos</title>
+    <style>
+        canvas { border: 1px solid #ccc; margin: 10px; }
+        body { font-family: Arial; padding: 20px; background: #f5f5f5; }
+        .container { max-width: 600px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Generador de Iconos PWA</h1>
+        <p>Click derecho en cada icono → "Guardar imagen como..."</p>
+        <div>
+            <h3>Icon 192x192</h3>
+            <canvas id="icon192" width="192" height="192"></canvas>
+        </div>
+        <div>
+            <h3>Icon 512x512</h3>
+            <canvas id="icon512" width="512" height="512"></canvas>
+        </div>
+    </div>
+
+    <script>
+        function drawIcon(canvasId, size) {
+            const canvas = document.getElementById(canvasId);
+            const ctx = canvas.getContext('2d');
+            
+            // Fondo degradado
+            const gradient = ctx.createLinearGradient(0, 0, size, size);
+            gradient.addColorStop(0, '#667eea');
+            gradient.addColorStop(1, '#764ba2');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, size, size);
+            
+            // QR simulado
+            const qrSize = size * 0.6;
+            const qrX = (size - qrSize) / 2;
+            const qrY = (size - qrSize) / 2;
+            
+            ctx.fillStyle = 'white';
+            ctx.fillRect(qrX, qrY, qrSize, qrSize);
+            
+            // Cuadrados del QR
+            ctx.fillStyle = '#333';
+            const boxSize = qrSize / 8;
+            
+            // Esquinas (simulando marcadores QR)
+            // Superior izquierda
+            ctx.fillRect(qrX + boxSize, qrY + boxSize, boxSize * 2, boxSize * 2);
+            // Superior derecha
+            ctx.fillRect(qrX + qrSize - boxSize * 3, qrY + boxSize, boxSize * 2, boxSize * 2);
+            // Inferior izquierda
+            ctx.fillRect(qrX + boxSize, qrY + qrSize - boxSize * 3, boxSize * 2, boxSize * 2);
+            
+            // Patrón aleatorio en el centro
+            for (let i = 0; i < 20; i++) {
+                const x = qrX + Math.random() * qrSize * 0.6 + qrSize * 0.2;
+                const y = qrY + Math.random() * qrSize * 0.6 + qrSize * 0.2;
+                const s = boxSize * 0.8;
+                ctx.fillRect(x, y, s, s);
+            }
+        }
+        
+        drawIcon('icon192', 192);
+        drawIcon('icon512', 512);
+        
+        console.log('Iconos generados. Click derecho → Guardar imagen como...');
+        console.log('Guarda como: icon-192.png y icon-512.png');
+    </script>
+</body>
+</html>

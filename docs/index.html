@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#4CAF50">
+    <meta name="description" content="PWA para escanear y generar códigos QR">
+    <title>QR Scanner & Generator PWA</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icon-192.png">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📱 QR PWA Test</h1>
+            <p class="subtitle">Escanea y genera códigos QR</p>
+        </header>
+
+        <!-- Botón de instalación -->
+        <div id="installContainer" class="install-banner hidden">
+            <button id="installButton" class="btn btn-install">
+                📥 Instalar App
+            </button>
+        </div>
+
+        <!-- Tabs -->
+        <div class="tabs">
+            <button class="tab-btn active" data-tab="scanner">📷 Escanear</button>
+            <button class="tab-btn" data-tab="generator">🔲 Generar</button>
+            <button class="tab-btn" data-tab="notifications">🔔 Notificaciones</button>
+        </div>
+
+        <!-- Scanner Tab -->
+        <div id="scanner" class="tab-content active">
+            <div class="card">
+                <h2>Escanear Código QR</h2>
+                <button id="startScanBtn" class="btn btn-primary">
+                    📸 Abrir Cámara
+                </button>
+                <button id="stopScanBtn" class="btn btn-danger hidden">
+                    ⏹️ Cerrar Cámara
+                </button>
+                
+                <div id="cameraContainer" class="camera-container hidden">
+                    <video id="video" autoplay playsinline></video>
+                    <canvas id="canvas" class="hidden"></canvas>
+                </div>
+
+                <div id="scanResult" class="result hidden">
+                    <h3>✅ Resultado:</h3>
+                    <p id="resultText"></p>
+                    <button id="copyResultBtn" class="btn btn-secondary">
+                        📋 Copiar
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Generator Tab -->
+        <div id="generator" class="tab-content">
+            <div class="card">
+                <h2>Generar Código QR</h2>
+                <div class="form-group">
+                    <label for="qrInput">Texto o URL:</label>
+                    <input 
+                        type="text" 
+                        id="qrInput" 
+                        placeholder="Escribe algo para generar QR"
+                        value="https://github.com"
+                    >
+                </div>
+                <button id="generateBtn" class="btn btn-primary">
+                    🔲 Generar QR
+                </button>
+                <button id="generateRandomBtn" class="btn btn-secondary">
+                    🎲 Generar Random
+                </button>
+                
+                <div id="qrContainer" class="qr-display"></div>
+                
+                <button id="downloadQRBtn" class="btn btn-success hidden">
+                    💾 Descargar QR
+                </button>
+            </div>
+        </div>
+
+        <!-- Notifications Tab -->
+        <div id="notifications" class="tab-content">
+            <div class="card">
+                <h2>Notificaciones Push</h2>
+                <p class="info">Prueba las notificaciones de la PWA</p>
+                
+                <div id="notificationStatus" class="status-box">
+                    <p>Estado: <span id="statusText">No configuradas</span></p>
+                </div>
+
+                <button id="enableNotificationsBtn" class="btn btn-primary">
+                    🔔 Activar Notificaciones
+                </button>
+                
+                <button id="sendNotificationBtn" class="btn btn-success hidden">
+                    📬 Enviar Notificación de Prueba
+                </button>
+
+                <div class="notification-options hidden" id="notificationOptions">
+                    <h3>Enviar notificación personalizada:</h3>
+                    <div class="form-group">
+                        <label for="notifTitle">Título:</label>
+                        <input type="text" id="notifTitle" placeholder="Título de la notificación">
+                    </div>
+                    <div class="form-group">
+                        <label for="notifBody">Mensaje:</label>
+                        <textarea id="notifBody" rows="3" placeholder="Contenido de la notificación"></textarea>
+                    </div>
+                    <button id="sendCustomNotificationBtn" class="btn btn-primary">
+                        📤 Enviar
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Info Footer -->
+        <footer>
+            <div class="info-box">
+                <p><strong>Estado PWA:</strong> <span id="pwaStatus">Verificando...</span></p>
+                <p><strong>Online:</strong> <span id="onlineStatus">✅</span></p>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
