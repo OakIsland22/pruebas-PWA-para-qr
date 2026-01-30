@@ -4,6 +4,7 @@ let deferredPrompt = null;
 let isScanning = false;
 let currentStream = null;
 let torchEnabled = false;
+let scheduledNotificationTimeout = null;
 let settings = {
     theme: 'auto',
     soundEnabled: true,
@@ -639,6 +640,9 @@ function setupSettings() {
     
     document.getElementById('enableNotificationsBtn').addEventListener('click', enableNotifications);
     document.getElementById('sendNotificationBtn').addEventListener('click', sendTestNotification);
+
+    document.getElementById('scheduleNotificationBtn').addEventListener('click', scheduleNotification);
+    document.getElementById('cancelScheduledNotificationBtn').addEventListener('click', cancelScheduledNotification);
     
     document.getElementById('clearAllDataBtn').addEventListener('click', () => {
         if (confirm('¿Borrar TODOS los datos? Esta acción no se puede deshacer.')) {
@@ -648,6 +652,56 @@ function setupSettings() {
     });
     
     checkNotificationPermission();
+}
+
+function scheduleNotification() {
+    const minutes = parseInt(document.getElementById('notificationDelay').value, 10);
+    const message = document.getElementById('notificationMessage').value.trim() || 'Recordatorio de prueba';
+
+    if (!Number.isFinite(minutes) || minutes < 1) {
+        alert('⚠️ Indica un número de minutos válido (mínimo 1)');
+        return;
+    }
+
+    if (Notification.permission !== 'granted') {
+        alert('⚠️ Activa las notificaciones primero');
+        return;
+    }
+
+    cancelScheduledNotification();
+
+    const delayMs = minutes * 60 * 1000;
+    const runAt = new Date(Date.now() + delayMs);
+
+    scheduledNotificationTimeout = setTimeout(() => {
+        sendNotification('⏰ Recordatorio', message);
+        scheduledNotificationTimeout = null;
+        updateScheduledInfo(null);
+    }, delayMs);
+
+    updateScheduledInfo(runAt);
+    document.getElementById('cancelScheduledNotificationBtn').classList.remove('hidden');
+    showToast(`⏰ Notificación programada en ${minutes} min`);
+}
+
+function cancelScheduledNotification() {
+    if (scheduledNotificationTimeout) {
+        clearTimeout(scheduledNotificationTimeout);
+        scheduledNotificationTimeout = null;
+    }
+    updateScheduledInfo(null);
+    document.getElementById('cancelScheduledNotificationBtn').classList.add('hidden');
+}
+
+function updateScheduledInfo(date) {
+    const info = document.getElementById('scheduledInfo');
+    if (!date) {
+        info.classList.add('hidden');
+        info.textContent = '';
+        return;
+    }
+    info.textContent = `Programada para: ${date.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}`;
+    info.classList.remove('hidden');
 }
 
 function applyTheme() {

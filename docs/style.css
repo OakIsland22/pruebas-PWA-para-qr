@@ -653,6 +653,21 @@ footer {
     margin-bottom: 5px;
 }
 
+.notification-schedule {
+    margin-top: 20px;
+    padding-top: 15px;
+    border-top: 1px solid #eee;
+}
+
+.notification-schedule h4 {
+    margin-bottom: 10px;
+    color: #333;
+}
+
+body.dark-mode .notification-schedule {
+    border-top-color: #444;
+}
+
 /* Dark Mode */
 body.dark-mode {
     background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
