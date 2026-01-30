@@ -1,4 +1,4 @@
-const CACHE_NAME = 'qr-pwa-v1';
+const CACHE_NAME = 'qr-pwa-v3';
 const urlsToCache = [
   '.',
   'index.html',
@@ -6,6 +6,7 @@ const urlsToCache = [
   'app.js',
   'manifest.json',
   'https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js',
+  'https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js',
   'https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js'
 ];
 

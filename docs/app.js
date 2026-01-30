@@ -3,6 +3,7 @@ let html5QrCode = null;
 let deferredPrompt = null;
 let isScanning = false;
 let currentStream = null;
+let torchEnabled = false;
 let settings = {
     theme: 'auto',
     soundEnabled: true,
@@ -37,6 +38,8 @@ function initApp() {
     setupPWA();
     checkOnlineStatus();
     applyTheme();
+    updateModeUI();
+    listenDisplayModeChanges();
     
     console.log('✅ App inicializada correctamente');
 }
@@ -150,6 +153,7 @@ function setupScanner() {
         saveToHistory('scanned', text);
         showToast('✅ Guardado en historial');
     });
+    document.getElementById('toggleFlashBtn').addEventListener('click', toggleFlash);
 }
 
 async function startScanner() {
@@ -269,6 +273,26 @@ async function handleImageUpload(event) {
     }
 }
 
+async function toggleFlash() {
+    if (!currentStream) return;
+    const track = currentStream.getVideoTracks()[0];
+    const capabilities = track.getCapabilities ? track.getCapabilities() : {};
+    if (!capabilities.torch) {
+        showToast('⚠️ Flash no disponible');
+        return;
+    }
+
+    try {
+        torchEnabled = !torchEnabled;
+        await track.applyConstraints({ advanced: [{ torch: torchEnabled }] });
+        showToast(torchEnabled ? '🔦 Flash encendido' : '💡 Flash apagado');
+    } catch (error) {
+        torchEnabled = false;
+        console.error('Error al activar flash:', error);
+        showToast('❌ No se pudo activar el flash');
+    }
+}
+
 function stopScanner() {
     isScanning = false;
     
@@ -285,6 +309,7 @@ function stopScanner() {
     document.getElementById('cameraContainer').classList.add('hidden');
     document.getElementById('startScanBtn').classList.remove('hidden');
     document.getElementById('stopScanBtn').classList.add('hidden');
+    torchEnabled = false;
     document.getElementById('toggleFlashBtn').classList.add('hidden');
     
     console.log('⏹️ Cámara detenida');
@@ -731,13 +756,39 @@ function setupPWA() {
     window.addEventListener('appinstalled', () => {
         document.getElementById('installContainer').classList.add('hidden');
         deferredPrompt = null;
+        updateModeUI();
         sendNotification('¡App Instalada!', '📱 La PWA se instaló correctamente');
     });
     
     if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('service-worker.js')
-            .then(reg => console.log('✅ Service Worker registrado'))
+            .then(reg => {
+                console.log('✅ Service Worker registrado');
+
+                if (reg.waiting) {
+                    reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+                }
+
+                reg.addEventListener('updatefound', () => {
+                    const newWorker = reg.installing;
+                    if (!newWorker) return;
+
+                    newWorker.addEventListener('statechange', () => {
+                        if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                            console.log('🔄 Nueva versión disponible, actualizando...');
+                            newWorker.postMessage({ type: 'SKIP_WAITING' });
+                        }
+                    });
+                });
+            })
             .catch(err => console.error('❌ Error Service Worker:', err));
+
+        let refreshing = false;
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+            if (refreshing) return;
+            refreshing = true;
+            window.location.reload();
+        });
     }
 }
 
@@ -750,6 +801,30 @@ function checkIfPWA() {
         document.getElementById('installContainer').classList.add('hidden');
     } else {
         document.getElementById('pwaStatus').textContent = '🌐 Navegador';
+    }
+}
+
+function isRunningAsPWA() {
+    return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+}
+
+function updateModeUI() {
+    const isPwa = isRunningAsPWA();
+    document.querySelectorAll('.only-app').forEach(el => {
+        el.style.display = isPwa ? 'block' : 'none';
+    });
+    document.querySelectorAll('.only-browser').forEach(el => {
+        el.style.display = isPwa ? 'none' : 'block';
+    });
+}
+
+function listenDisplayModeChanges() {
+    const mq = window.matchMedia('(display-mode: standalone)');
+    const handler = () => updateModeUI();
+    if (mq.addEventListener) {
+        mq.addEventListener('change', handler);
+    } else if (mq.addListener) {
+        mq.addListener(handler);
     }
 }
 

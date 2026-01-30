@@ -203,6 +203,27 @@ h1 {
     display: none !important;
 }
 
+/* Mode banners */
+.mode-banner {
+    margin: 10px 0 20px;
+    padding: 12px 16px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(8px);
+    color: var(--text-light);
+    font-size: 0.9em;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.mode-banner strong {
+    color: var(--text-light);
+}
+
+.only-browser,
+.only-app {
+    display: none;
+}
+
 /* Camera */
 .camera-container {
     margin: 20px 0;
