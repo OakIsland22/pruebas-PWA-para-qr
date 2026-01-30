@@ -28,18 +28,28 @@
         <div class="tabs">
             <button class="tab-btn active" data-tab="scanner">📷 Escanear</button>
             <button class="tab-btn" data-tab="generator">🔲 Generar</button>
-            <button class="tab-btn" data-tab="notifications">🔔 Notificaciones</button>
+            <button class="tab-btn" data-tab="history">📋 Historial</button>
+            <button class="tab-btn" data-tab="settings">⚙️ Ajustes</button>
         </div>
 
         <!-- Scanner Tab -->
         <div id="scanner" class="tab-content active">
             <div class="card">
                 <h2>Escanear Código QR</h2>
-                <button id="startScanBtn" class="btn btn-primary">
-                    📸 Abrir Cámara
-                </button>
+                <div class="button-group">
+                    <button id="startScanBtn" class="btn btn-primary">
+                        📸 Abrir Cámara
+                    </button>
+                    <button id="uploadImageBtn" class="btn btn-secondary">
+                        🖼️ Subir Imagen
+                    </button>
+                </div>
+                <input type="file" id="imageInput" accept="image/*" class="hidden">
                 <button id="stopScanBtn" class="btn btn-danger hidden">
                     ⏹️ Cerrar Cámara
+                </button>
+                <button id="toggleFlashBtn" class="btn btn-secondary hidden">
+                    🔦 Flash
                 </button>
                 
                 <div id="cameraContainer" class="camera-container hidden">
@@ -50,30 +60,236 @@
                 <div id="scanResult" class="result hidden">
                     <h3>✅ Resultado:</h3>
                     <p id="resultText"></p>
-                    <button id="copyResultBtn" class="btn btn-secondary">
-                        📋 Copiar
+                    <div class="button-group">
+                        <button id="copyResultBtn" class="btn btn-secondary">
+                            📋 Copiar
+                        </button>
+                        <button id="shareResultBtn" class="btn btn-success">
+                            🔗 Compartir
+                        </button>
+                        <button id="saveResultBtn" class="btn btn-primary">
+                            💾 Guardar
+                        </button>
+                    </div>
+                
+                <!-- Tipo de QR -->
+                <div class="form-group">
+                    <label>Tipo de QR:</label>
+                    <select id="qrType" class="form-select">
+                        <option value="text">📝 Texto/URL</option>
+                        <option value="wifi">📶 WiFi</option>
+                        <option value="vcard">👤 Contacto</option>
+                        <option value="email">📧 Email</option>
+                        <option value="sms">💬 SMS</option>
+                        <option value="geo">📍 Ubicación</option>
+                    </select>
+                </div>
+
+                <!-- Formulario Texto/URL -->
+                <div id="textForm" class="qr-form">
+                    <div class="form-group">
+                        <label for="qrInput">Texto o URL:</label>
+                        <input 
+                            type="text" 
+                            id="qrInput" 
+                            placeholder="Escribe algo para generar QR"
+                            value="https://github.com"
+                        >
+                    </div>
+                </div>
+
+                <!-- Formulario WiFi -->
+                <div id="wifiForm" class="qr-form hidden">
+                    <div class="form-group">
+                        <label>SSID (Nombre WiFi):</label>
+                        <input type="text" id="wifiSSID" placeholder="Mi WiFi">
+             History Tab -->
+        <div id="history" class="tab-content">
+            <div class="card">
+                <h2>📋 Historial</h2>
+                <div class="history-tabs">
+                    <button class="history-tab-btn active" data-type="scanned">Escaneados</button>
+                    <button class="history-tab-btn" data-type="generated">Generados</button>
+                </div>
+                
+                <div class="history-actions">
+                    <button id="clearHistoryBtn" class="btn btn-danger btn-sm">
+                        🗑️ Limpiar Todo
                     </button>
+                    <button id="exportHistoryBtn" class="btn btn-secondary btn-sm">
+                        📤 Exportar
+                    </button>
+                </div>
+
+                <div id="historyList" class="history-list">
+                    <p class="empty-state">No hay elementos en el historial</p>
                 </div>
             </div>
         </div>
 
-        <!-- Generator Tab -->
-        <div id="generator" class="tab-content">
+        <!-- Settings Tab -->
+        <div id="settings" class="tab-content">
             <div class="card">
-                <h2>Generar Código QR</h2>
-                <div class="form-group">
-                    <label for="qrInput">Texto o URL:</label>
-                    <input 
-                        type="text" 
-                        id="qrInput" 
-                        placeholder="Escribe algo para generar QR"
-                        value="https://github.com"
-                    >
+                <h2>⚙️ Ajustes</h2>
+                
+                <!-- Tema -->
+                <div class="setting-group">
+                    <h3>🎨 Apariencia</h3>
+                    <div class="setting-item">
+                        <label>Tema:</label>
+                        <select id="themeSelect" class="form-select">
+                            <option value="auto">🌓 Automático</option>
+                            <option value="light">☀️ Claro</option>
+                            <option value="dark">🌙 Oscuro</option>
+                        </select>
+                    </div>
                 </div>
-                <button id="generateBtn" class="btn btn-primary">
-                    🔲 Generar QR
-                </button>
-                <button id="generateRandomBtn" class="btn btn-secondary">
+
+                <!-- Sonidos -->
+                <div class="setting-group">
+                    <h3>🔊 Sonidos</h3>
+                    <div class="setting-item">
+                        <label class="switch-label">
+                            <input type="checkbox" id="soundEnabled" checked>
+                            <span class="slider"></span>
+                            Sonido al escanear
+                        </label>
+                    </div>
+                    <div class="setting-item">
+                        <label class="switch-label">
+                            <input type="checkbox" id="vibrationEnabled" checked>
+                            <span class="slider"></span>
+                            Vibración
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Notificaciones -->
+                <div class="setting-group">
+                    <h3>🔔 Notificaciones</h3>
+                    <div id="notificationStatus" class="status-box">
+                        <p>Estado: <span id="statusText">No configuradas</span></p>
+                    </div>
+                    <button id="enableNotificationsBtn" class="btn btn-primary">
+                        🔔 Activar Notificaciones
+                    </button>
+                    <button id="sendNotificationBtn" class="btn btn-success hidden">
+                        📬 Enviar Prueba
+                    </button>
+                </div>
+
+                <!-- Estadísticas -->
+                <div class="setting-group">
+                    <h3>📊 Estadísticas</h3>
+                    <div class="stats-grid">
+                        <div class="stat-item">
+                            <span class="stat-value" id="statScanned">0</span>
+                            <span class="stat-label">Escaneados</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-value" id="statGenerated">0</span>
+                            <span class="stat-label">Generados</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-value" id="statTotal">0</span>
+                            <span class="stat-label">Total</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Datos -->
+                <div class="setting-group">
+                    <h3>💾 Datos</h3>
+                    <button id="clearAllDataBtn" class="btn btn-danger">
+                        🗑️ Borrar todos los datos
+                    </button>
+                </div>
+
+                <!-- Info -->
+                <div class="setting-group">
+                    <h3>ℹ️ Información</h3>
+                    <p class="info-text">Versión: 1.0.0</p>
+                    <p class="info-text">Desarrollado con ❤️</p
+                <!-- Formulario Email -->
+                <div id="emailForm" class="qr-form hidden">
+                    <div class="form-group">
+                        <label>Email destinatario:</label>
+                        <input type="email" id="emailTo" placeholder="destino@ejemplo.com">
+                    </div>
+                    <div class="form-group">
+                        <label>Asunto:</label>
+                        <input type="text" id="emailSubject" placeholder="Asunto del mensaje">
+                    </div>
+                    <div class="form-group">
+                        <label>Mensaje:</label>
+                        <textarea id="emailBody" rows="3" placeholder="Contenido del email"></textarea>
+                    </div>
+                </div>
+
+                <!-- Formulario SMS -->
+                <div id="smsForm" class="qr-form hidden">
+                    <div class="form-group">
+                        <label>Número de teléfono:</label>
+                        <input type="tel" id="smsNumber" placeholder="+34 600 000 000">
+                    </div>
+                    <div class="form-group">
+                        <label>Mensaje:</label>
+                        <textarea id="smsMessage" rows="3" placeholder="Texto del SMS"></textarea>
+                    </div>
+                </div>
+
+                <!-- Formulario Geo -->
+                <div id="geoForm" class="qr-form hidden">
+                    <div class="form-group">
+                        <label>Latitud:</label>
+                        <input type="text" id="geoLat" placeholder="40.416775">
+                    </div>
+                    <div class="form-group">
+                        <label>Longitud:</label>
+                        <input type="text" id="geoLong" placeholder="-3.703790">
+                    </div>
+                    <button id="getLocationBtn" class="btn btn-secondary">
+                        📍 Usar mi ubicación
+                    </button>
+                </div>
+
+                <!-- Personalización -->
+                <div class="customization-section">
+                    <h3>🎨 Personalización</h3>
+                    <div class="color-options">
+                        <div class="form-group">
+                            <label>Color QR:</label>
+                            <input type="color" id="qrColorDark" value="#000000">
+                        </div>
+                        <div class="form-group">
+                            <label>Color fondo:</label>
+                            <input type="color" id="qrColorLight" value="#ffffff">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="button-group">
+                    <button id="generateBtn" class="btn btn-primary">
+                        🔲 Generar QR
+                    </button>
+                    <button id="generateRandomBtn" class="btn btn-secondary">
+                        🎲 Random
+                    </button>
+                </div>
+                
+                <div id="qrContainer" class="qr-display"></div>
+                
+                <div class="button-group hidden" id="qrActions">
+                    <button id="downloadQRBtn" class="btn btn-success">
+                        💾 Descargar
+                    </button>
+                    <button id="shareQRBtn" class="btn btn-primary">
+                        🔗 Compartir
+                    </button>
+                    <button id="saveQRBtn" class="btn btn-secondary">
+                        📌 Guardar
+                    </button>
+                </divid="generateRandomBtn" class="btn btn-secondary">
                     🎲 Generar Random
                 </button>
                 
@@ -131,6 +347,7 @@
 
     <!-- Scripts -->
     <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
     <script src="app.js"></script>
 </body>

@@ -2,24 +2,51 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>Generar Iconos</title>
+    <title>Generar Iconos PWA</title>
     <style>
         canvas { border: 1px solid #ccc; margin: 10px; }
         body { font-family: Arial; padding: 20px; background: #f5f5f5; }
-        .container { max-width: 600px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; }
+        .container { max-width: 800px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; }
+        .btn { padding: 12px 24px; background: #4CAF50; color: white; border: none; border-radius: 6px; cursor: pointer; margin: 10px; }
+        .btn:hover { background: #45a049; }
+        h3 { margin-top: 30px; }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>Generador de Iconos PWA</h1>
-        <p>Click derecho en cada icono → "Guardar imagen como..."</p>
+        <h1>🎨 Generador de Iconos PWA</h1>
+        <p>Genera todos los iconos y splash screens necesarios para tu PWA</p>
+        
+        <button class="btn" onclick="downloadAll()">💾 Descargar Todos</button>
+        
         <div>
-            <h3>Icon 192x192</h3>
+            <h3>Icon 192x192 (App Icon)</h3>
             <canvas id="icon192" width="192" height="192"></canvas>
+            <button class="btn" onclick="downloadCanvas('icon192', 'icon-192.png')">Descargar</button>
         </div>
+        
         <div>
-            <h3>Icon 512x512</h3>
+            <h3>Icon 512x512 (App Icon)</h3>
             <canvas id="icon512" width="512" height="512"></canvas>
+            <button class="btn" onclick="downloadCanvas('icon512', 'icon-512.png')">Descargar</button>
+        </div>
+        
+        <div>
+            <h3>Splash Screen 640x1136 (iPhone 5/SE)</h3>
+            <canvas id="splash640" width="640" height="1136"></canvas>
+            <button class="btn" onclick="downloadCanvas('splash640', 'splash-640x1136.png')">Descargar</button>
+        </div>
+        
+        <div>
+            <h3>Splash Screen 750x1334 (iPhone 6/7/8)</h3>
+            <canvas id="splash750" width="750" height="1334"></canvas>
+            <button class="btn" onclick="downloadCanvas('splash750', 'splash-750x1334.png')">Descargar</button>
+        </div>
+        
+        <div>
+            <h3>Splash Screen 1242x2208 (iPhone Plus)</h3>
+            <canvas id="splash1242" width="1242" height="2208"></canvas>
+            <button class="btn" onclick="downloadCanvas('splash1242', 'splash-1242x2208.png')">Descargar</button>
         </div>
     </div>
 
@@ -48,27 +75,114 @@
             const boxSize = qrSize / 8;
             
             // Esquinas (simulando marcadores QR)
-            // Superior izquierda
             ctx.fillRect(qrX + boxSize, qrY + boxSize, boxSize * 2, boxSize * 2);
-            // Superior derecha
             ctx.fillRect(qrX + qrSize - boxSize * 3, qrY + boxSize, boxSize * 2, boxSize * 2);
-            // Inferior izquierda
             ctx.fillRect(qrX + boxSize, qrY + qrSize - boxSize * 3, boxSize * 2, boxSize * 2);
             
             // Patrón aleatorio en el centro
-            for (let i = 0; i < 20; i++) {
-                const x = qrX + Math.random() * qrSize * 0.6 + qrSize * 0.2;
-                const y = qrY + Math.random() * qrSize * 0.6 + qrSize * 0.2;
+            for (let i = 0; i < 25; i++) {
+                const x = qrX + Math.random() * qrSize * 0.5 + qrSize * 0.25;
+                const y = qrY + Math.random() * qrSize * 0.5 + qrSize * 0.25;
                 const s = boxSize * 0.8;
                 ctx.fillRect(x, y, s, s);
             }
+            
+            // Borde redondeado (opcional)
+            const radius = size * 0.15;
+            ctx.globalCompositeOperation = 'destination-in';
+            ctx.beginPath();
+            ctx.roundRect(0, 0, size, size, radius);
+            ctx.fill();
+            ctx.globalCompositeOperation = 'source-over';
         }
         
+        function drawSplashScreen(canvasId, width, height) {
+            const canvas = document.getElementById(canvasId);
+            const ctx = canvas.getContext('2d');
+            
+            // Fondo degradado
+            const gradient = ctx.createLinearGradient(0, 0, 0, height);
+            gradient.addColorStop(0, '#667eea');
+            gradient.addColorStop(1, '#764ba2');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, width, height);
+            
+            // Logo/Icono en el centro
+            const iconSize = Math.min(width, height) * 0.3;
+            const iconX = (width - iconSize) / 2;
+            const iconY = (height - iconSize) / 2 - iconSize * 0.2;
+            
+            // Dibujar QR grande
+            const qrSize = iconSize * 0.7;
+            const qrX = iconX + (iconSize - qrSize) / 2;
+            const qrY = iconY + (iconSize - qrSize) / 2;
+            
+            ctx.fillStyle = 'white';
+            ctx.fillRect(qrX, qrY, qrSize, qrSize);
+            
+            ctx.fillStyle = '#333';
+            const boxSize = qrSize / 8;
+            
+            ctx.fillRect(qrX + boxSize, qrY + boxSize, boxSize * 2, boxSize * 2);
+            ctx.fillRect(qrX + qrSize - boxSize * 3, qrY + boxSize, boxSize * 2, boxSize * 2);
+            ctx.fillRect(qrX + boxSize, qrY + qrSize - boxSize * 3, boxSize * 2, boxSize * 2);
+            
+            for (let i = 0; i < 30; i++) {
+                const x = qrX + Math.random() * qrSize * 0.5 + qrSize * 0.25;
+                const y = qrY + Math.random() * qrSize * 0.5 + qrSize * 0.25;
+                const s = boxSize * 0.8;
+                ctx.fillRect(x, y, s, s);
+            }
+            
+            // Texto debajo
+            const textY = iconY + iconSize + 60;
+            ctx.fillStyle = 'white';
+            ctx.font = `bold ${width * 0.06}px sans-serif`;
+            ctx.textAlign = 'center';
+            ctx.fillText('QR PWA', width / 2, textY);
+            
+            ctx.font = `${width * 0.035}px sans-serif`;
+            ctx.fillText('Scanner & Generator', width / 2, textY + width * 0.05);
+        }
+        
+        function downloadCanvas(canvasId, filename) {
+            const canvas = document.getElementById(canvasId);
+            canvas.toBlob((blob) => {
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            });
+        }
+        
+        function downloadAll() {
+            const canvases = [
+                { id: 'icon192', name: 'icon-192.png' },
+                { id: 'icon512', name: 'icon-512.png' },
+                { id: 'splash640', name: 'splash-640x1136.png' },
+                { id: 'splash750', name: 'splash-750x1334.png' },
+                { id: 'splash1242', name: 'splash-1242x2208.png' }
+            ];
+            
+            canvases.forEach((item, index) => {
+                setTimeout(() => {
+                    downloadCanvas(item.id, item.name);
+                }, index * 500);
+            });
+        }
+        
+        // Generar todos los iconos al cargar
         drawIcon('icon192', 192);
         drawIcon('icon512', 512);
+        drawSplashScreen('splash640', 640, 1136);
+        drawSplashScreen('splash750', 750, 1334);
+        drawSplashScreen('splash1242', 1242, 2208);
         
-        console.log('Iconos generados. Click derecho → Guardar imagen como...');
-        console.log('Guarda como: icon-192.png y icon-512.png');
+        console.log('✅ Iconos generados. Click en "Descargar Todos" o descarga individualmente.');
     </script>
 </body>
 </html>

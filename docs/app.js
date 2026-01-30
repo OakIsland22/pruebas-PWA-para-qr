@@ -2,46 +2,23 @@
 let html5QrCode = null;
 let deferredPrompt = null;
 let isScanning = false;
+let currentStream = null;
+let settings = {
+    theme: 'auto',
+    soundEnabled: true,
+    vibrationEnabled: true
+};
+let stats = {
+    scanned: 0,
+    generated: 0
+};
 
-// Elementos del DOM
-const elements = {
-    // Tabs
-    tabBtns: document.querySelectorAll('.tab-btn'),
-    tabContents: document.querySelectorAll('.tab-content'),
-    
-    // Scanner
-    startScanBtn: document.getElementById('startScanBtn'),
-    stopScanBtn: document.getElementById('stopScanBtn'),
-    cameraContainer: document.getElementById('cameraContainer'),
-    video: document.getElementById('video'),
-    canvas: document.getElementById('canvas'),
-    scanResult: document.getElementById('scanResult'),
-    resultText: document.getElementById('resultText'),
-    copyResultBtn: document.getElementById('copyResultBtn'),
-    
-    // Generator
-    qrInput: document.getElementById('qrInput'),
-    generateBtn: document.getElementById('generateBtn'),
-    generateRandomBtn: document.getElementById('generateRandomBtn'),
-    qrContainer: document.getElementById('qrContainer'),
-    downloadQRBtn: document.getElementById('downloadQRBtn'),
-    
-    // Notifications
-    enableNotificationsBtn: document.getElementById('enableNotificationsBtn'),
-    sendNotificationBtn: document.getElementById('sendNotificationBtn'),
-    notificationStatus: document.getElementById('statusText'),
-    notificationOptions: document.getElementById('notificationOptions'),
-    notifTitle: document.getElementById('notifTitle'),
-    notifBody: document.getElementById('notifBody'),
-    sendCustomNotificationBtn: document.getElementById('sendCustomNotificationBtn'),
-    
-    // Install
-    installContainer: document.getElementById('installContainer'),
-    installButton: document.getElementById('installButton'),
-    
-    // Status
-    pwaStatus: document.getElementById('pwaStatus'),
-    onlineStatus: document.getElementById('onlineStatus')
+// LocalStorage keys
+const STORAGE_KEYS = {
+    HISTORY_SCANNED: 'qr_history_scanned',
+    HISTORY_GENERATED: 'qr_history_generated',
+    SETTINGS: 'qr_settings',
+    STATS: 'qr_stats'
 };
 
 // ========== INICIALIZACIÓN ==========
@@ -50,19 +27,86 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function initApp() {
+    loadSettings();
+    loadStats();
     setupTabs();
     setupScanner();
     setupGenerator();
-    setupNotifications();
+    setupHistory();
+    setupSettings();
     setupPWA();
     checkOnlineStatus();
+    applyTheme();
     
     console.log('✅ App inicializada correctamente');
 }
 
+// ========== STORAGE ==========
+function loadSettings() {
+    const saved = localStorage.getItem(STORAGE_KEYS.SETTINGS);
+    if (saved) {
+        settings = JSON.parse(saved);
+    }
+}
+
+function saveSettings() {
+    localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(settings));
+}
+
+function loadStats() {
+    const saved = localStorage.getItem(STORAGE_KEYS.STATS);
+    if (saved) {
+        stats = JSON.parse(saved);
+    }
+    updateStatsDisplay();
+}
+
+function saveStats() {
+    localStorage.setItem(STORAGE_KEYS.STATS, JSON.stringify(stats));
+    updateStatsDisplay();
+}
+
+function updateStatsDisplay() {
+    document.getElementById('statScanned').textContent = stats.scanned;
+    document.getElementById('statGenerated').textContent = stats.generated;
+    document.getElementById('statTotal').textContent = stats.scanned + stats.generated;
+}
+
+function saveToHistory(type, data) {
+    const key = type === 'scanned' ? STORAGE_KEYS.HISTORY_SCANNED : STORAGE_KEYS.HISTORY_GENERATED;
+    const history = JSON.parse(localStorage.getItem(key) || '[]');
+    
+    history.unshift({
+        id: Date.now(),
+        content: data,
+        date: new Date().toISOString()
+    });
+    
+    // Limitar a 100 elementos
+    if (history.length > 100) {
+        history.pop();
+    }
+    
+    localStorage.setItem(key, JSON.stringify(history));
+    
+    // Actualizar stats
+    stats[type]++;
+    saveStats();
+}
+
+function getHistory(type) {
+    const key = type === 'scanned' ? STORAGE_KEYS.HISTORY_SCANNED : STORAGE_KEYS.HISTORY_GENERATED;
+    return JSON.parse(localStorage.getItem(key) || '[]');
+}
+
+function clearHistory(type) {
+    const key = type === 'scanned' ? STORAGE_KEYS.HISTORY_SCANNED : STORAGE_KEYS.HISTORY_GENERATED;
+    localStorage.removeItem(key);
+}
+
 // ========== TABS ==========
 function setupTabs() {
-    elements.tabBtns.forEach(btn => {
+    document.querySelectorAll('.tab-btn').forEach(btn => {
         btn.addEventListener('click', () => {
             const tabName = btn.dataset.tab;
             switchTab(tabName);
@@ -71,11 +115,9 @@ function setupTabs() {
 }
 
 function switchTab(tabName) {
-    // Desactivar todos los tabs
-    elements.tabBtns.forEach(btn => btn.classList.remove('active'));
-    elements.tabContents.forEach(content => content.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
     
-    // Activar el tab seleccionado
     const activeBtn = document.querySelector(`[data-tab="${tabName}"]`);
     const activeContent = document.getElementById(tabName);
     
@@ -84,37 +126,55 @@ function switchTab(tabName) {
         activeContent.classList.add('active');
     }
     
-    // Detener scanner si se cambia de tab
     if (tabName !== 'scanner' && isScanning) {
         stopScanner();
+    }
+    
+    if (tabName === 'history') {
+        loadHistoryView();
     }
 }
 
 // ========== SCANNER QR ==========
 function setupScanner() {
-    elements.startScanBtn.addEventListener('click', startScanner);
-    elements.stopScanBtn.addEventListener('click', stopScanner);
-    elements.copyResultBtn.addEventListener('click', copyResult);
+    document.getElementById('startScanBtn').addEventListener('click', startScanner);
+    document.getElementById('stopScanBtn').addEventListener('click', stopScanner);
+    document.getElementById('uploadImageBtn').addEventListener('click', () => {
+        document.getElementById('imageInput').click();
+    });
+    document.getElementById('imageInput').addEventListener('change', handleImageUpload);
+    document.getElementById('copyResultBtn').addEventListener('click', copyResult);
+    document.getElementById('shareResultBtn').addEventListener('click', shareResult);
+    document.getElementById('saveResultBtn').addEventListener('click', () => {
+        const text = document.getElementById('resultText').textContent;
+        saveToHistory('scanned', text);
+        showToast('✅ Guardado en historial');
+    });
 }
 
 async function startScanner() {
     try {
-        // Ocultar resultado previo
-        elements.scanResult.classList.add('hidden');
+        document.getElementById('scanResult').classList.add('hidden');
         
-        // Verificar permisos de cámara
         const stream = await navigator.mediaDevices.getUserMedia({ 
             video: { facingMode: 'environment' }
         });
         
-        elements.video.srcObject = stream;
-        elements.cameraContainer.classList.remove('hidden');
-        elements.startScanBtn.classList.add('hidden');
-        elements.stopScanBtn.classList.remove('hidden');
+        currentStream = stream;
+        const video = document.getElementById('video');
+        video.srcObject = stream;
+        
+        document.getElementById('cameraContainer').classList.remove('hidden');
+        document.getElementById('startScanBtn').classList.add('hidden');
+        document.getElementById('stopScanBtn').classList.remove('hidden');
+        
+        // Mostrar botón de flash si está disponible
+        const track = stream.getVideoTracks()[0];
+        if (track.getCapabilities && track.getCapabilities().torch) {
+            document.getElementById('toggleFlashBtn').classList.remove('hidden');
+        }
         
         isScanning = true;
-        
-        // Escanear QR en tiempo real
         scanQRFromVideo();
         
         console.log('📸 Cámara iniciada');
@@ -125,35 +185,39 @@ async function startScanner() {
 }
 
 function scanQRFromVideo() {
-    const ctx = elements.canvas.getContext('2d');
+    const canvas = document.getElementById('canvas');
+    const video = document.getElementById('video');
+    const ctx = canvas.getContext('2d');
     
     const scan = () => {
         if (!isScanning) return;
         
-        if (elements.video.readyState === elements.video.HAVE_ENOUGH_DATA) {
-            elements.canvas.width = elements.video.videoWidth;
-            elements.canvas.height = elements.video.videoHeight;
-            ctx.drawImage(elements.video, 0, 0, elements.canvas.width, elements.canvas.height);
+        if (video.readyState === video.HAVE_ENOUGH_DATA) {
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
             
-            const imageData = ctx.getImageData(0, 0, elements.canvas.width, elements.canvas.height);
-            const code = jsQR(imageData.data, imageData.width, imageData.height);
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
             
-            if (code) {
-                console.log('✅ QR detectado:', code.data);
-                showScanResult(code.data);
-                playBeep();
-                // No detenemos automáticamente para permitir múltiples escaneos
-                // stopScanner();
-                return;
+            if (typeof jsQR !== 'undefined') {
+                const code = jsQR(imageData.data, imageData.width, imageData.height);
+                
+                if (code) {
+                    console.log('✅ QR detectado:', code.data);
+                    showScanResult(code.data);
+                    playBeep();
+                    vibrate();
+                    saveToHistory('scanned', code.data);
+                    return;
+                }
             }
         }
         
         requestAnimationFrame(scan);
     };
     
-    // Intentar usar jsQR si está disponible, sino usar alternativa
     if (typeof jsQR === 'undefined') {
-        console.log('⚠️ jsQR no disponible, usando método alternativo');
+        console.log('⚠️ jsQR no disponible, usando html5-qrcode');
         scanQRAlternative();
     } else {
         scan();
@@ -161,7 +225,6 @@ function scanQRFromVideo() {
 }
 
 function scanQRAlternative() {
-    // Método alternativo usando html5-qrcode
     html5QrCode = new Html5Qrcode("cameraContainer");
     
     const config = { 
@@ -176,86 +239,168 @@ function scanQRAlternative() {
             console.log('✅ QR detectado:', decodedText);
             showScanResult(decodedText);
             playBeep();
-        },
-        (errorMessage) => {
-            // Error al escanear, continuar intentando
+            vibrate();
+            saveToHistory('scanned', decodedText);
         }
     ).catch(err => {
         console.error('Error al iniciar scanner:', err);
     });
 }
 
+async function handleImageUpload(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    
+    try {
+        // Usar html5-qrcode para escanear imagen
+        if (typeof Html5Qrcode !== 'undefined') {
+            const html5QrCode = new Html5Qrcode("qr-reader-temp");
+            const result = await html5QrCode.scanFile(file, true);
+            showScanResult(result);
+            playBeep();
+            vibrate();
+            saveToHistory('scanned', result);
+        } else {
+            alert('⚠️ Función no disponible');
+        }
+    } catch (error) {
+        console.error('Error al escanear imagen:', error);
+        alert('❌ No se pudo detectar un QR en la imagen');
+    }
+}
+
 function stopScanner() {
     isScanning = false;
     
-    // Detener stream de video
-    if (elements.video.srcObject) {
-        elements.video.srcObject.getTracks().forEach(track => track.stop());
-        elements.video.srcObject = null;
+    if (currentStream) {
+        currentStream.getTracks().forEach(track => track.stop());
+        currentStream = null;
     }
     
-    // Detener html5-qrcode si se usó
     if (html5QrCode) {
         html5QrCode.stop().catch(err => console.log(err));
         html5QrCode = null;
     }
     
-    elements.cameraContainer.classList.add('hidden');
-    elements.startScanBtn.classList.remove('hidden');
-    elements.stopScanBtn.classList.add('hidden');
+    document.getElementById('cameraContainer').classList.add('hidden');
+    document.getElementById('startScanBtn').classList.remove('hidden');
+    document.getElementById('stopScanBtn').classList.add('hidden');
+    document.getElementById('toggleFlashBtn').classList.add('hidden');
     
     console.log('⏹️ Cámara detenida');
 }
 
 function showScanResult(text) {
-    elements.resultText.textContent = text;
-    elements.scanResult.classList.remove('hidden');
+    document.getElementById('resultText').textContent = text;
+    document.getElementById('scanResult').classList.remove('hidden');
 }
 
 function copyResult() {
-    const text = elements.resultText.textContent;
+    const text = document.getElementById('resultText').textContent;
     navigator.clipboard.writeText(text).then(() => {
-        alert('✅ Copiado al portapapeles');
+        showToast('✅ Copiado al portapapeles');
     }).catch(err => {
         console.error('Error al copiar:', err);
     });
 }
 
-function playBeep() {
-    // Sonido de confirmación
-    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-    const oscillator = audioContext.createOscillator();
-    const gainNode = audioContext.createGain();
+async function shareResult() {
+    const text = document.getElementById('resultText').textContent;
     
-    oscillator.connect(gainNode);
-    gainNode.connect(audioContext.destination);
-    
-    oscillator.frequency.value = 800;
-    oscillator.type = 'sine';
-    
-    gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
-    
-    oscillator.start(audioContext.currentTime);
-    oscillator.stop(audioContext.currentTime + 0.2);
+    if (navigator.share) {
+        try {
+            await navigator.share({
+                title: 'QR Escaneado',
+                text: text
+            });
+            console.log('✅ Compartido');
+        } catch (error) {
+            console.log('Compartir cancelado');
+        }
+    } else {
+        copyResult();
+    }
 }
 
 // ========== GENERADOR QR ==========
 function setupGenerator() {
-    elements.generateBtn.addEventListener('click', generateQR);
-    elements.generateRandomBtn.addEventListener('click', generateRandomQR);
-    elements.downloadQRBtn.addEventListener('click', downloadQR);
+    const qrType = document.getElementById('qrType');
+    qrType.addEventListener('change', handleQRTypeChange);
+    
+    document.getElementById('generateBtn').addEventListener('click', generateQR);
+    document.getElementById('generateRandomBtn').addEventListener('click', generateRandomQR);
+    document.getElementById('downloadQRBtn').addEventListener('click', downloadQR);
+    document.getElementById('shareQRBtn').addEventListener('click', shareQR);
+    document.getElementById('saveQRBtn').addEventListener('click', () => {
+        const text = getQRDataFromForm();
+        saveToHistory('generated', text);
+        showToast('✅ Guardado en historial');
+    });
+    
+    document.getElementById('getLocationBtn').addEventListener('click', getGeolocation);
+}
+
+function handleQRTypeChange() {
+    const type = document.getElementById('qrType').value;
+    
+    document.querySelectorAll('.qr-form').forEach(form => {
+        form.classList.add('hidden');
+    });
+    
+    document.getElementById(`${type}Form`).classList.remove('hidden');
+}
+
+function getQRDataFromForm() {
+    const type = document.getElementById('qrType').value;
+    let data = '';
+    
+    switch(type) {
+        case 'text':
+            data = document.getElementById('qrInput').value.trim();
+            break;
+        case 'wifi':
+            const ssid = document.getElementById('wifiSSID').value;
+            const password = document.getElementById('wifiPassword').value;
+            const encryption = document.getElementById('wifiEncryption').value;
+            data = `WIFI:T:${encryption};S:${ssid};P:${password};;`;
+            break;
+        case 'vcard':
+            const name = document.getElementById('vcardName').value;
+            const phone = document.getElementById('vcardPhone').value;
+            const email = document.getElementById('vcardEmail').value;
+            data = `BEGIN:VCARD\nVERSION:3.0\nFN:${name}\nTEL:${phone}\nEMAIL:${email}\nEND:VCARD`;
+            break;
+        case 'email':
+            const emailTo = document.getElementById('emailTo').value;
+            const subject = document.getElementById('emailSubject').value;
+            const body = document.getElementById('emailBody').value;
+            data = `mailto:${emailTo}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+            break;
+        case 'sms':
+            const number = document.getElementById('smsNumber').value;
+            const message = document.getElementById('smsMessage').value;
+            data = `sms:${number}?body=${encodeURIComponent(message)}`;
+            break;
+        case 'geo':
+            const lat = document.getElementById('geoLat').value;
+            const long = document.getElementById('geoLong').value;
+            data = `geo:${lat},${long}`;
+            break;
+    }
+    
+    return data;
 }
 
 function generateQR() {
-    const text = elements.qrInput.value.trim();
+    const text = getQRDataFromForm();
     
     if (!text) {
-        alert('⚠️ Escribe algo para generar el QR');
+        alert('⚠️ Completa los campos requeridos');
         return;
     }
     
     createQRCode(text);
+    saveToHistory('generated', text);
 }
 
 function generateRandomQR() {
@@ -270,31 +415,34 @@ function generateRandomQR() {
     ];
     
     const randomText = randomTexts[Math.floor(Math.random() * randomTexts.length)];
-    elements.qrInput.value = randomText;
+    document.getElementById('qrInput').value = randomText;
     createQRCode(randomText);
+    saveToHistory('generated', randomText);
 }
 
 function createQRCode(text) {
-    // Limpiar QR anterior
-    elements.qrContainer.innerHTML = '';
+    const container = document.getElementById('qrContainer');
+    container.innerHTML = '';
     
-    // Crear nuevo QR
-    const qr = new QRCode(elements.qrContainer, {
+    const colorDark = document.getElementById('qrColorDark').value;
+    const colorLight = document.getElementById('qrColorLight').value;
+    
+    const qr = new QRCode(container, {
         text: text,
         width: 256,
         height: 256,
-        colorDark: '#000000',
-        colorLight: '#ffffff',
+        colorDark: colorDark,
+        colorLight: colorLight,
         correctLevel: QRCode.CorrectLevel.H
     });
     
-    elements.downloadQRBtn.classList.remove('hidden');
+    document.getElementById('qrActions').classList.remove('hidden');
     
     console.log('✅ QR generado:', text);
 }
 
 function downloadQR() {
-    const canvas = elements.qrContainer.querySelector('canvas');
+    const canvas = document.getElementById('qrContainer').querySelector('canvas');
     
     if (!canvas) {
         alert('⚠️ No hay QR para descargar');
@@ -311,35 +459,205 @@ function downloadQR() {
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
         
-        console.log('💾 QR descargado');
+        showToast('💾 QR descargado');
     });
 }
 
-// ========== NOTIFICACIONES ==========
-function setupNotifications() {
-    elements.enableNotificationsBtn.addEventListener('click', enableNotifications);
-    elements.sendNotificationBtn.addEventListener('click', sendTestNotification);
-    elements.sendCustomNotificationBtn.addEventListener('click', sendCustomNotification);
+async function shareQR() {
+    const canvas = document.getElementById('qrContainer').querySelector('canvas');
+    
+    if (!canvas) {
+        alert('⚠️ No hay QR para compartir');
+        return;
+    }
+    
+    canvas.toBlob(async (blob) => {
+        const file = new File([blob], 'qr-code.png', { type: 'image/png' });
+        
+        if (navigator.share && navigator.canShare({ files: [file] })) {
+            try {
+                await navigator.share({
+                    title: 'Código QR',
+                    text: 'Código QR generado',
+                    files: [file]
+                });
+                console.log('✅ Compartido');
+            } catch (error) {
+                console.log('Compartir cancelado');
+            }
+        } else {
+            downloadQR();
+        }
+    });
+}
+
+async function getGeolocation() {
+    if (!navigator.geolocation) {
+        alert('⚠️ Geolocalización no disponible');
+        return;
+    }
+    
+    try {
+        const position = await new Promise((resolve, reject) => {
+            navigator.geolocation.getCurrentPosition(resolve, reject);
+        });
+        
+        document.getElementById('geoLat').value = position.coords.latitude.toFixed(6);
+        document.getElementById('geoLong').value = position.coords.longitude.toFixed(6);
+        
+        showToast('📍 Ubicación obtenida');
+    } catch (error) {
+        console.error('Error al obtener ubicación:', error);
+        alert('❌ No se pudo obtener la ubicación');
+    }
+}
+
+// ========== HISTORIAL ==========
+function setupHistory() {
+    document.querySelectorAll('.history-tab-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.history-tab-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            loadHistoryView();
+        });
+    });
+    
+    document.getElementById('clearHistoryBtn').addEventListener('click', () => {
+        if (confirm('¿Borrar todo el historial?')) {
+            const type = document.querySelector('.history-tab-btn.active').dataset.type;
+            clearHistory(type);
+            loadHistoryView();
+            showToast('🗑️ Historial borrado');
+        }
+    });
+    
+    document.getElementById('exportHistoryBtn').addEventListener('click', exportHistory);
+}
+
+function loadHistoryView() {
+    const type = document.querySelector('.history-tab-btn.active').dataset.type;
+    const history = getHistory(type);
+    const container = document.getElementById('historyList');
+    
+    if (history.length === 0) {
+        container.innerHTML = '<p class="empty-state">No hay elementos en el historial</p>';
+        return;
+    }
+    
+    container.innerHTML = history.map(item => `
+        <div class="history-item" data-id="${item.id}">
+            <div class="history-item-header">
+                <span class="history-item-date">${formatDate(item.date)}</span>
+                <button onclick="deleteHistoryItem('${type}', ${item.id})" style="background: #f44336; color: white; padding: 4px 8px; border: none; border-radius: 4px; cursor: pointer;">🗑️</button>
+            </div>
+            <div class="history-item-content">${escapeHtml(item.content)}</div>
+            <div class="history-item-actions">
+                <button onclick="copyText('${escapeHtml(item.content)}')" style="background: #2196F3; color: white; padding: 6px 12px; border: none; border-radius: 6px; cursor: pointer;">📋 Copiar</button>
+                <button onclick="shareText('${escapeHtml(item.content)}')" style="background: #4CAF50; color: white; padding: 6px 12px; border: none; border-radius: 6px; cursor: pointer;">🔗 Compartir</button>
+            </div>
+        </div>
+    `).join('');
+}
+
+function deleteHistoryItem(type, id) {
+    const key = type === 'scanned' ? STORAGE_KEYS.HISTORY_SCANNED : STORAGE_KEYS.HISTORY_GENERATED;
+    let history = JSON.parse(localStorage.getItem(key) || '[]');
+    history = history.filter(item => item.id !== id);
+    localStorage.setItem(key, JSON.stringify(history));
+    loadHistoryView();
+    showToast('🗑️ Elemento borrado');
+}
+
+function exportHistory() {
+    const type = document.querySelector('.history-tab-btn.active').dataset.type;
+    const history = getHistory(type);
+    
+    const dataStr = JSON.stringify(history, null, 2);
+    const blob = new Blob([dataStr], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `qr-history-${type}-${Date.now()}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    
+    showToast('📤 Historial exportado');
+}
+
+// ========== AJUSTES ==========
+function setupSettings() {
+    const themeSelect = document.getElementById('themeSelect');
+    const soundEnabled = document.getElementById('soundEnabled');
+    const vibrationEnabled = document.getElementById('vibrationEnabled');
+    
+    themeSelect.value = settings.theme;
+    soundEnabled.checked = settings.soundEnabled;
+    vibrationEnabled.checked = settings.vibrationEnabled;
+    
+    themeSelect.addEventListener('change', (e) => {
+        settings.theme = e.target.value;
+        saveSettings();
+        applyTheme();
+    });
+    
+    soundEnabled.addEventListener('change', (e) => {
+        settings.soundEnabled = e.target.checked;
+        saveSettings();
+    });
+    
+    vibrationEnabled.addEventListener('change', (e) => {
+        settings.vibrationEnabled = e.target.checked;
+        saveSettings();
+    });
+    
+    document.getElementById('enableNotificationsBtn').addEventListener('click', enableNotifications);
+    document.getElementById('sendNotificationBtn').addEventListener('click', sendTestNotification);
+    
+    document.getElementById('clearAllDataBtn').addEventListener('click', () => {
+        if (confirm('¿Borrar TODOS los datos? Esta acción no se puede deshacer.')) {
+            localStorage.clear();
+            location.reload();
+        }
+    });
     
     checkNotificationPermission();
 }
 
+function applyTheme() {
+    const theme = settings.theme;
+    
+    if (theme === 'dark') {
+        document.body.classList.add('dark-mode');
+    } else if (theme === 'light') {
+        document.body.classList.remove('dark-mode');
+    } else {
+        // Auto: detectar preferencia del sistema
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        if (prefersDark) {
+            document.body.classList.add('dark-mode');
+        } else {
+            document.body.classList.remove('dark-mode');
+        }
+    }
+}
+
+// ========== NOTIFICACIONES ==========
 function checkNotificationPermission() {
     if (!('Notification' in window)) {
-        elements.notificationStatus.textContent = 'No soportadas';
-        console.warn('⚠️ Este navegador no soporta notificaciones');
+        document.getElementById('statusText').textContent = 'No soportadas';
         return;
     }
     
     if (Notification.permission === 'granted') {
-        elements.notificationStatus.textContent = '✅ Activas';
-        elements.enableNotificationsBtn.classList.add('hidden');
-        elements.sendNotificationBtn.classList.remove('hidden');
-        elements.notificationOptions.classList.remove('hidden');
+        document.getElementById('statusText').textContent = '✅ Activas';
+        document.getElementById('enableNotificationsBtn').classList.add('hidden');
+        document.getElementById('sendNotificationBtn').classList.remove('hidden');
     } else if (Notification.permission === 'denied') {
-        elements.notificationStatus.textContent = '❌ Bloqueadas';
+        document.getElementById('statusText').textContent = '❌ Bloqueadas';
     } else {
-        elements.notificationStatus.textContent = '⏸️ Pendientes';
+        document.getElementById('statusText').textContent = '⏸️ Pendientes';
     }
 }
 
@@ -353,22 +671,16 @@ async function enableNotifications() {
         const permission = await Notification.requestPermission();
         
         if (permission === 'granted') {
-            elements.notificationStatus.textContent = '✅ Activas';
-            elements.enableNotificationsBtn.classList.add('hidden');
-            elements.sendNotificationBtn.classList.remove('hidden');
-            elements.notificationOptions.classList.remove('hidden');
+            document.getElementById('statusText').textContent = '✅ Activas';
+            document.getElementById('enableNotificationsBtn').classList.add('hidden');
+            document.getElementById('sendNotificationBtn').classList.remove('hidden');
             
-            // Enviar notificación de bienvenida
             sendNotification('¡Notificaciones activadas!', '✅ Ahora recibirás notificaciones de esta app');
-            
-            console.log('✅ Notificaciones activadas');
         } else {
-            elements.notificationStatus.textContent = '❌ Rechazadas';
-            alert('⚠️ Has rechazado los permisos de notificación');
+            document.getElementById('statusText').textContent = '❌ Rechazadas';
         }
     } catch (error) {
         console.error('Error al solicitar permisos:', error);
-        alert('❌ Error al solicitar permisos de notificación');
     }
 }
 
@@ -376,28 +688,15 @@ function sendTestNotification() {
     const messages = [
         { title: '¡Hola!', body: 'Esta es una notificación de prueba 👋' },
         { title: 'QR Escaneado', body: '✅ Código QR detectado correctamente' },
-        { title: 'PWA Funcionando', body: '📱 Tu PWA está trabajando correctamente' },
-        { title: 'Recordatorio', body: '🔔 No olvides probar todas las funciones' }
+        { title: 'PWA Funcionando', body: '📱 Tu PWA está trabajando correctamente' }
     ];
     
     const random = messages[Math.floor(Math.random() * messages.length)];
     sendNotification(random.title, random.body);
 }
 
-function sendCustomNotification() {
-    const title = elements.notifTitle.value.trim() || 'Notificación';
-    const body = elements.notifBody.value.trim() || 'Mensaje de prueba';
-    
-    sendNotification(title, body);
-    
-    // Limpiar campos
-    elements.notifTitle.value = '';
-    elements.notifBody.value = '';
-}
-
 function sendNotification(title, body) {
     if (Notification.permission !== 'granted') {
-        alert('⚠️ Debes activar las notificaciones primero');
         return;
     }
     
@@ -406,8 +705,7 @@ function sendNotification(title, body) {
         icon: 'icon-192.png',
         badge: 'icon-192.png',
         vibrate: [200, 100, 200],
-        tag: 'pwa-notification',
-        requireInteraction: false
+        tag: 'pwa-notification'
     };
     
     const notification = new Notification(title, options);
@@ -416,43 +714,30 @@ function sendNotification(title, body) {
         window.focus();
         notification.close();
     };
-    
-    console.log('📬 Notificación enviada:', title);
 }
 
 // ========== PWA ==========
 function setupPWA() {
-    // Verificar si es PWA
     checkIfPWA();
     
-    // Evento de instalación
     window.addEventListener('beforeinstallprompt', (e) => {
         e.preventDefault();
         deferredPrompt = e;
-        elements.installContainer.classList.remove('hidden');
-        console.log('💾 Prompt de instalación disponible');
+        document.getElementById('installContainer').classList.remove('hidden');
     });
     
-    elements.installButton.addEventListener('click', installPWA);
+    document.getElementById('installButton').addEventListener('click', installPWA);
     
-    // Evento cuando se instala
     window.addEventListener('appinstalled', () => {
-        elements.installContainer.classList.add('hidden');
+        document.getElementById('installContainer').classList.add('hidden');
         deferredPrompt = null;
-        console.log('✅ PWA instalada');
-        
         sendNotification('¡App Instalada!', '📱 La PWA se instaló correctamente');
     });
     
-    // Registrar Service Worker
     if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('service-worker.js')
-            .then(reg => {
-                console.log('✅ Service Worker registrado:', reg.scope);
-            })
-            .catch(err => {
-                console.error('❌ Error al registrar Service Worker:', err);
-            });
+            .then(reg => console.log('✅ Service Worker registrado'))
+            .catch(err => console.error('❌ Error Service Worker:', err));
     }
 }
 
@@ -461,51 +746,149 @@ function checkIfPWA() {
     const isIOSStandalone = window.navigator.standalone === true;
     
     if (isStandalone || isIOSStandalone) {
-        elements.pwaStatus.textContent = '✅ Instalada';
-        elements.installContainer.classList.add('hidden');
+        document.getElementById('pwaStatus').textContent = '✅ Instalada';
+        document.getElementById('installContainer').classList.add('hidden');
     } else {
-        elements.pwaStatus.textContent = '🌐 Navegador';
+        document.getElementById('pwaStatus').textContent = '🌐 Navegador';
     }
 }
 
 async function installPWA() {
     if (!deferredPrompt) {
-        alert('⚠️ La instalación no está disponible en este momento');
+        alert('⚠️ La instalación no está disponible');
         return;
     }
     
     deferredPrompt.prompt();
-    
-    const { outcome } = await deferredPrompt.userChoice;
-    
-    if (outcome === 'accepted') {
-        console.log('✅ Usuario aceptó instalar');
-    } else {
-        console.log('❌ Usuario rechazó instalar');
-    }
-    
+    await deferredPrompt.userChoice;
     deferredPrompt = null;
-    elements.installContainer.classList.add('hidden');
+    document.getElementById('installContainer').classList.add('hidden');
 }
 
 // ========== ESTADO ONLINE/OFFLINE ==========
 function checkOnlineStatus() {
     updateOnlineStatus();
-    
     window.addEventListener('online', updateOnlineStatus);
     window.addEventListener('offline', updateOnlineStatus);
 }
 
 function updateOnlineStatus() {
+    const statusEl = document.getElementById('onlineStatus');
     if (navigator.onLine) {
-        elements.onlineStatus.textContent = '✅ Conectado';
+        statusEl.textContent = '✅ Conectado';
     } else {
-        elements.onlineStatus.textContent = '⚠️ Sin conexión';
+        statusEl.textContent = '⚠️ Sin conexión';
     }
 }
 
-// ========== JSQR FALLBACK ==========
-// Si jsQR no está disponible, crear un placeholder
-if (typeof jsQR === 'undefined') {
-    console.log('ℹ️ jsQR no cargado, usando html5-qrcode como alternativa');
+// ========== UTILIDADES ==========
+function playBeep() {
+    if (!settings.soundEnabled) return;
+    
+    try {
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+        
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+        
+        oscillator.frequency.value = 800;
+        oscillator.type = 'sine';
+        
+        gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
+        
+        oscillator.start(audioContext.currentTime);
+        oscillator.stop(audioContext.currentTime + 0.2);
+    } catch (error) {
+        console.log('Error al reproducir sonido');
+    }
 }
+
+function vibrate() {
+    if (!settings.vibrationEnabled) return;
+    
+    if ('vibrate' in navigator) {
+        navigator.vibrate(200);
+    }
+}
+
+function showToast(message) {
+    const toast = document.createElement('div');
+    toast.style.cssText = `
+        position: fixed;
+        top: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(0, 0, 0, 0.8);
+        color: white;
+        padding: 12px 24px;
+        border-radius: 8px;
+        z-index: 10000;
+        animation: slideDown 0.3s ease;
+    `;
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    
+    setTimeout(() => {
+        toast.style.animation = 'slideUp 0.3s ease';
+        setTimeout(() => toast.remove(), 300);
+    }, 2000);
+}
+
+function formatDate(dateString) {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diff = now - date;
+    
+    if (diff < 60000) return 'Hace un momento';
+    if (diff < 3600000) return `Hace ${Math.floor(diff / 60000)} min`;
+    if (diff < 86400000) return `Hace ${Math.floor(diff / 3600000)} h`;
+    
+    return date.toLocaleDateString('es-ES', { 
+        day: '2-digit', 
+        month: '2-digit', 
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML.replace(/'/g, "\\'").replace(/"/g, '\\"');
+}
+
+function copyText(text) {
+    navigator.clipboard.writeText(text).then(() => {
+        showToast('✅ Copiado');
+    });
+}
+
+async function shareText(text) {
+    if (navigator.share) {
+        try {
+            await navigator.share({ text: text });
+        } catch (error) {
+            copyText(text);
+        }
+    } else {
+        copyText(text);
+    }
+}
+
+// Agregar estilos de animación
+const style = document.createElement('style');
+style.textContent = `
+    @keyframes slideDown {
+        from { transform: translateX(-50%) translateY(-100%); opacity: 0; }
+        to { transform: translateX(-50%) translateY(0); opacity: 1; }
+    }
+    @keyframes slideUp {
+        from { transform: translateX(-50%) translateY(0); opacity: 1; }
+        to { transform: translateX(-50%) translateY(-100%); opacity: 0; }
+    }
+`;
+document.head.appendChild(style);

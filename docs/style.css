@@ -4,6 +4,15 @@
     box-sizing: border-box;
 }
 
+html, body {
+    overscroll-behavior: none;
+    -webkit-overflow-scrolling: touch;
+    position: fixed;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+}
+
 :root {
     --primary-color: #4CAF50;
     --secondary-color: #2196F3;
@@ -28,6 +37,11 @@ body {
 .container {
     max-width: 600px;
     margin: 0 auto;
+    height: 100vh;
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
 }
 
 header {
@@ -357,6 +371,308 @@ footer {
     }
 }
 
+/* Button Group */
+.button-group {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.button-group .btn {
+    flex: 1;
+    min-width: 120px;
+}
+
+.btn-sm {
+    padding: 8px 16px;
+    font-size: 0.9em;
+}
+
+/* Form Select */
+.form-select {
+    width: 100%;
+    padding: 12px;
+    border: 2px solid #ddd;
+    border-radius: 8px;
+    font-size: 1em;
+    background: white;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.form-select:focus {
+    outline: none;
+    border-color: var(--primary-color);
+}
+
+/* QR Forms */
+.qr-form {
+    margin-bottom: 20px;
+}
+
+/* Customization */
+.customization-section {
+    margin: 20px 0;
+    padding: 20px;
+    background: #f5f5f5;
+    border-radius: 8px;
+}
+
+.customization-section h3 {
+    margin-bottom: 15px;
+    color: #333;
+}
+
+.color-options {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+}
+
+.color-options input[type="color"] {
+    width: 100%;
+    height: 50px;
+    border: 2px solid #ddd;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+/* History */
+.history-tabs {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.history-tab-btn {
+    flex: 1;
+    padding: 10px;
+    background: #f5f5f5;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: var(--transition);
+}
+
+.history-tab-btn.active {
+    background: var(--primary-color);
+    color: white;
+}
+
+.history-actions {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.history-list {
+    max-height: 500px;
+    overflow-y: auto;
+}
+
+.history-item {
+    padding: 15px;
+    background: #f9f9f9;
+    border-radius: 8px;
+    margin-bottom: 10px;
+    border-left: 4px solid var(--primary-color);
+}
+
+.history-item:hover {
+    background: #f0f0f0;
+}
+
+.history-item-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.history-item-date {
+    font-size: 0.85em;
+    color: #666;
+}
+
+.history-item-content {
+    word-break: break-all;
+    color: #333;
+    font-weight: 500;
+    margin-bottom: 10px;
+}
+
+.history-item-actions {
+    display: flex;
+    gap: 5px;
+}
+
+.history-item-actions button {
+    padding: 6px 12px;
+    font-size: 0.85em;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.empty-state {
+    text-align: center;
+    color: #999;
+    padding: 40px 20px;
+    font-style: italic;
+}
+
+/* Settings */
+.setting-group {
+    margin-bottom: 30px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid #eee;
+}
+
+.setting-group:last-child {
+    border-bottom: none;
+}
+
+.setting-group h3 {
+    margin-bottom: 15px;
+    color: #333;
+}
+
+.setting-item {
+    margin-bottom: 15px;
+}
+
+/* Switch Toggle */
+.switch-label {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    user-select: none;
+}
+
+.switch-label input[type="checkbox"] {
+    display: none;
+}
+
+.slider {
+    position: relative;
+    display: inline-block;
+    width: 50px;
+    height: 28px;
+    background: #ccc;
+    border-radius: 34px;
+    margin-right: 15px;
+    transition: var(--transition);
+}
+
+.slider:before {
+    content: "";
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    left: 4px;
+    top: 4px;
+    background: white;
+    border-radius: 50%;
+    transition: var(--transition);
+}
+
+.switch-label input:checked + .slider {
+    background: var(--primary-color);
+}
+
+.switch-label input:checked + .slider:before {
+    transform: translateX(22px);
+}
+
+/* Stats */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 15px;
+    margin-top: 15px;
+}
+
+.stat-item {
+    text-align: center;
+    padding: 20px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 8px;
+    color: white;
+}
+
+.stat-value {
+    display: block;
+    font-size: 2em;
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+
+.stat-label {
+    font-size: 0.85em;
+    opacity: 0.9;
+}
+
+.info-text {
+    color: #666;
+    font-size: 0.9em;
+    margin-bottom: 5px;
+}
+
+/* Dark Mode */
+body.dark-mode {
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+}
+
+body.dark-mode .card {
+    background: rgba(45, 45, 45, 0.95);
+    color: #e0e0e0;
+}
+
+body.dark-mode .card h2,
+body.dark-mode .card h3,
+body.dark-mode .form-group label {
+    color: #e0e0e0;
+}
+
+body.dark-mode .form-group input,
+body.dark-mode .form-group textarea,
+body.dark-mode .form-select {
+    background: #1a1a1a;
+    border-color: #444;
+    color: #e0e0e0;
+}
+
+body.dark-mode .history-item {
+    background: #2d2d2d;
+}
+
+body.dark-mode .history-item:hover {
+    background: #3a3a3a;
+}
+
+body.dark-mode .history-item-content {
+    color: #e0e0e0;
+}
+
+body.dark-mode .customization-section {
+    background: #2d2d2d;
+}
+
+body.dark-mode .setting-group {
+    border-bottom-color: #444;
+}
+
+body.dark-mode .history-tab-btn {
+    background: #2d2d2d;
+    color: #e0e0e0;
+}
+
+body.dark-mode .qr-display {
+    background: #2d2d2d;
+}
+
 /* Animations */
 @keyframes pulse {
     0% {
@@ -372,4 +688,19 @@ footer {
 
 .btn-primary.pulse {
     animation: pulse 2s infinite;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.history-item {
+    animation: slideIn 0.3s ease;
 }
