@@ -122,12 +122,54 @@ async function checkForUpdates() {
         currentVersion = remoteVersion;
         localStorage.setItem('app_version', remoteVersion);
         
+        // Actualizar badge de versión
+        updateVersionBadge(remoteVersion, remoteVersion !== localVersion);
+        
         if (localVersion !== remoteVersion) {
             console.log(`🔄 Actualización disponible: ${localVersion} → ${remoteVersion}`);
             showUpdateNotification(remoteVersion, versionData.changelog[0].changes);
         }
     } catch (error) {
         console.log('ℹ️ No se pudo verificar actualizaciones:', error);
+        const fallbackVersion = localStorage.getItem('app_version') || '1.0.0';
+        updateVersionBadge(fallbackVersion, false);
+    }
+}
+
+function updateVersionBadge(version, isNew) {
+    const badge = document.getElementById('versionBadge');
+    const versionSpan = document.getElementById('currentVersion');
+    
+    if (badge && versionSpan) {
+        versionSpan.textContent = version;
+        
+        if (isNew) {
+            badge.style.cssText = `
+                background: rgba(255, 193, 7, 0.3) !important;
+                border: 1px solid rgba(255, 193, 7, 0.6) !important;
+                color: #FFD700 !important;
+                animation: pulse-new 0.5s ease-in-out, pulse-badge 2s ease-in-out 0.5s infinite;
+            `;
+            
+            const style = document.createElement('style');
+            style.textContent = `
+                @keyframes pulse-new {
+                    0% { transform: scale(1); }
+                    50% { transform: scale(1.1); }
+                    100% { transform: scale(1); }
+                }
+            `;
+            if (!document.querySelector('style[data-version-pulse]')) {
+                style.setAttribute('data-version-pulse', 'true');
+                document.head.appendChild(style);
+            }
+            
+            setTimeout(() => {
+                badge.style.animation = 'pulse-badge 2s ease-in-out infinite';
+                badge.style.background = 'rgba(255, 255, 255, 0.2)';
+                badge.style.color = 'rgba(255, 255, 255, 0.8)';
+            }, 2000);
+        }
     }
 }
 
