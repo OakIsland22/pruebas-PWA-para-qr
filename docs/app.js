@@ -31,6 +31,7 @@ document.addEventListener('DOMContentLoaded', () => {
 function initApp() {
     loadSettings();
     loadStats();
+    checkForUpdates();
     setupTabs();
     setupScanner();
     setupGenerator();
@@ -106,6 +107,127 @@ function getHistory(type) {
 function clearHistory(type) {
     const key = type === 'scanned' ? STORAGE_KEYS.HISTORY_SCANNED : STORAGE_KEYS.HISTORY_GENERATED;
     localStorage.removeItem(key);
+}
+
+// ========== VERSIONADO Y ACTUALIZACIONES ==========
+let currentVersion = null;
+
+async function checkForUpdates() {
+    try {
+        const response = await fetch('./version.json?v=' + Date.now());
+        const versionData = await response.json();
+        const remoteVersion = versionData.version;
+        const localVersion = localStorage.getItem('app_version') || '1.0.0';
+        
+        currentVersion = remoteVersion;
+        localStorage.setItem('app_version', remoteVersion);
+        
+        if (localVersion !== remoteVersion) {
+            console.log(`🔄 Actualización disponible: ${localVersion} → ${remoteVersion}`);
+            showUpdateNotification(remoteVersion, versionData.changelog[0].changes);
+        }
+    } catch (error) {
+        console.log('ℹ️ No se pudo verificar actualizaciones:', error);
+    }
+}
+
+function showUpdateNotification(version, changes) {
+    // Crear notificación de actualización
+    const existingNotif = document.getElementById('updateNotification');
+    if (existingNotif) existingNotif.remove();
+    
+    const notification = document.createElement('div');
+    notification.id = 'updateNotification';
+    notification.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        background: linear-gradient(135deg, var(--primary-color), #0066cc);
+        color: white;
+        padding: 15px 20px;
+        text-align: center;
+        z-index: 9999;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 15px;
+        font-size: 14px;
+        font-weight: 500;
+        animation: slideDown 0.3s ease-out;
+    `;
+    
+    const style = document.createElement('style');
+    style.textContent = `
+        @keyframes slideDown {
+            from {
+                transform: translateY(-100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+    `;
+    document.head.appendChild(style);
+    
+    const text = document.createElement('span');
+    text.innerHTML = `
+        <strong>✨ Versión ${version} disponible</strong><br>
+        ${changes.slice(0, 2).join(' • ')}
+    `;
+    
+    const button = document.createElement('button');
+    button.textContent = 'Recargar';
+    button.style.cssText = `
+        background: white;
+        color: var(--primary-color);
+        border: none;
+        padding: 8px 16px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-weight: 600;
+        font-size: 13px;
+        transition: transform 0.2s;
+    `;
+    button.onmouseover = () => button.style.transform = 'scale(1.05)';
+    button.onmouseout = () => button.style.transform = 'scale(1)';
+    button.onclick = () => location.reload();
+    
+    const closeBtn = document.createElement('button');
+    closeBtn.textContent = '✕';
+    closeBtn.style.cssText = `
+        background: rgba(255,255,255,0.2);
+        color: white;
+        border: none;
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        cursor: pointer;
+        font-size: 18px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: background 0.2s;
+    `;
+    closeBtn.onmouseover = () => closeBtn.style.background = 'rgba(255,255,255,0.3)';
+    closeBtn.onmouseout = () => closeBtn.style.background = 'rgba(255,255,255,0.2)';
+    closeBtn.onclick = () => notification.remove();
+    
+    notification.appendChild(text);
+    notification.appendChild(button);
+    notification.appendChild(closeBtn);
+    document.body.insertBefore(notification, document.body.firstChild);
+    
+    // Auto-cerrar después de 10 segundos
+    setTimeout(() => {
+        if (notification.parentNode) {
+            notification.style.animation = 'slideDown 0.3s ease-out reverse';
+            setTimeout(() => notification.remove(), 300);
+        }
+    }, 10000);
 }
 
 // ========== TABS ==========

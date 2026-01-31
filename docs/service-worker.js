@@ -1,10 +1,11 @@
-const CACHE_NAME = 'qr-pwa-v4';
+const CACHE_NAME = 'qr-pwa-v5';
 const urlsToCache = [
   '.',
   'index.html',
   'style.css',
   'app.js',
   'manifest.json',
+  'version.json',
   'https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js',
   'https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js',
   'https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js'
@@ -49,7 +50,26 @@ self.addEventListener('activate', (event) => {
 });
 
 // Estrategia de fetch: Network First, falling back to Cache
+// Para version.json, siempre busca en network
 self.addEventListener('fetch', (event) => {
+  // Versión siempre desde network
+  if (event.request.url.includes('version.json')) {
+    event.respondWith(
+      fetch(event.request)
+        .then((response) => {
+          if (response && response.status === 200) {
+            const responseToCache = response.clone();
+            caches.open(CACHE_NAME).then((cache) => {
+              cache.put(event.request, responseToCache);
+            });
+          }
+          return response;
+        })
+        .catch(() => caches.match(event.request))
+    );
+    return;
+  }
+  
   event.respondWith(
     fetch(event.request)
       .then((response) => {

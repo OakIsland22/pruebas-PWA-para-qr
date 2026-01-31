@@ -1,0 +1,80 @@
+{
+  "version": "2.1.0",
+  "lastUpdated": "2026-01-30",
+  "changelog": [
+    {
+      "version": "2.1.0",
+      "date": "2026-01-30",
+      "changes": [
+        "Actualizaciones finales en estilos y lógica de la app",
+        "Sistema de versionado implementado",
+        "Notificación de actualizaciones disponibles"
+      ]
+    },
+    {
+      "version": "2.0.0",
+      "date": "2026-01-29",
+      "changes": [
+        "Eliminado duplicado de HTML",
+        "Ajustes Safari iOS (svh y tamaño de texto)",
+        "Notificaciones programadas en minutos",
+        "Fixes en layout para dispositivos móviles"
+      ]
+    },
+    {
+      "version": "1.9.0",
+      "date": "2026-01-28",
+      "changes": [
+        "Interfaz diferenciada para navegador vs modo PWA",
+        "Control de flash/linterna para cámara",
+        "Mejor manejo de permisos de cámara"
+      ]
+    },
+    {
+      "version": "1.8.0",
+      "date": "2026-01-27",
+      "changes": [
+        "Sistema de notificaciones push",
+        "Notificaciones programadas",
+        "Vibración en escaneos"
+      ]
+    },
+    {
+      "version": "1.7.0",
+      "date": "2026-01-26",
+      "changes": [
+        "Tema oscuro/claro con detección automática",
+        "Persistencia de preferencias",
+        "Mejoras en accesibilidad"
+      ]
+    },
+    {
+      "version": "1.6.0",
+      "date": "2026-01-25",
+      "changes": [
+        "Generador QR con 6 tipos: texto, WiFi, vCard, email, SMS, geolocalización",
+        "Exportación e importación de historial",
+        "Estadísticas de uso"
+      ]
+    },
+    {
+      "version": "1.5.0",
+      "date": "2026-01-24",
+      "changes": [
+        "Historial de códigos QR escaneados",
+        "Búsqueda en historial",
+        "Soporte para compartir con API nativa"
+      ]
+    },
+    {
+      "version": "1.0.0",
+      "date": "2026-01-23",
+      "changes": [
+        "Versión inicial del PWA",
+        "Escaneo de QR con cámara",
+        "Carga de imágenes desde galería",
+        "Service Worker para funcionamiento offline"
+      ]
+    }
+  ]
+}
